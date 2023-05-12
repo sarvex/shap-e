@@ -74,13 +74,12 @@ class CheckpointFunctionGradFunction(torch.autograd.Function):
             # Tensors.
             shallow_copies = [x.view_as(x) for x in input_tensors]
             output_tensors = ctx.run_function(*shallow_copies)
-        input_grads = torch.autograd.grad(
+        return torch.autograd.grad(
             output_tensors,
             input_tensors + input_params,
             output_grads,
             allow_unused=True,
         )
-        return input_grads
 
     @staticmethod
     @custom_bwd

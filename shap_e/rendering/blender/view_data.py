@@ -23,7 +23,7 @@ class BlenderViewData(ViewData):
         assert set("RGBA").issubset(
             set(self.channels)
         ), "The blender output should at least have RGBA images."
-        names = set(x.filename for x in self.zipfile.infolist())
+        names = {x.filename for x in self.zipfile.infolist()}
         for i in itertools.count():
             name = f"{i:05}.json"
             if name not in names:
@@ -49,7 +49,7 @@ class BlenderViewData(ViewData):
         if any(x in channels for x in "RGBA"):
             with self.zipfile.open(f"{index:05}.png", "r") as f:
                 rgba = np.array(Image.open(f)).astype(np.float32) / 255.0
-                channel_map.update(zip("RGBA", rgba.transpose([2, 0, 1])))
+                channel_map |= zip("RGBA", rgba.transpose([2, 0, 1]))
         if "D" in channels:
             with self.zipfile.open(f"{index:05}_depth.png", "r") as f:
                 # Decode a 16-bit fixed-point number.

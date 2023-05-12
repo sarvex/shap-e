@@ -128,22 +128,20 @@ def indices_for_output_mode(
         h_map.sdf = (0, 1)
         if separate_coarse_channels:
             assert separate_nerf_channels
-            h_map.density_coarse = (1, 2)
             h_map.density_fine = (2, 3)
             h_map.stf = (3, 6)
             h_map.nerf_coarse = (6, 9)
             h_map.nerf_fine = (9, 12)
         else:
-            h_map.density_coarse = (1, 2)
             h_map.density_fine = (1, 2)
             if separate_nerf_channels:
-                h_map.stf = (2, 5)
                 h_map.nerf_coarse = (5, 8)
                 h_map.nerf_fine = (5, 8)
             else:
-                h_map.stf = (2, 5)
                 h_map.nerf_coarse = (2, 5)
                 h_map.nerf_fine = (2, 5)
+            h_map.stf = (2, 5)
+        h_map.density_coarse = (1, 2)
     else:
         h_directionless_map.sdf = (0, 1)
         h_directionless_map.density_coarse = (1, 2)
@@ -157,10 +155,7 @@ def indices_for_output_mode(
             h_map.nerf_coarse = (3, 6)
             h_map.nerf_fine = (6, 9)
         else:
-            if separate_nerf_channels:
-                h_map.nerf_coarse = (3, 6)
-            else:
-                h_map.nerf_coarse = (0, 3)
+            h_map.nerf_coarse = (3, 6) if separate_nerf_channels else (0, 3)
             h_map.nerf_fine = h_map.nerf_coarse
     return h_map, h_directionless_map
 

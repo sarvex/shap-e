@@ -63,7 +63,9 @@ def superdict(dictionary, key=None):
         return None
     if (key is None) or (key == ""):
         return dictionary
-    return AttrDict(OrderedDict((key + "." + k, value) for (k, value) in dictionary.items()))
+    return AttrDict(
+        OrderedDict((f"{key}.{k}", value) for (k, value) in dictionary.items())
+    )
 
 
 def leveldict(dictionary, depth=0):
@@ -134,11 +136,10 @@ class MetaModule(nn.Module):
                 self.register_meta_parameter(name, parameter)
             else:
                 self.register_meta_buffer(name, parameter)
+        elif trainable:
+            self.register_parameter(name, parameter)
         else:
-            if trainable:
-                self.register_parameter(name, parameter)
-            else:
-                self.register_buffer(name, parameter)
+            self.register_buffer(name, parameter)
 
     def named_meta_parameters(self, prefix="", recurse=True):
         """
@@ -151,13 +152,11 @@ class MetaModule(nn.Module):
                 if name in meta:
                     yield name, param
 
-        gen = self._named_members(
+        yield from self._named_members(
             meta_iterator,
             prefix=prefix,
             recurse=recurse,
         )
-        for name, param in gen:
-            yield name, param
 
     def named_nonmeta_parameters(self, prefix="", recurse=True):
         def _iterator(module):
@@ -166,13 +165,11 @@ class MetaModule(nn.Module):
                 if name not in meta:
                     yield name, param
 
-        gen = self._named_members(
+        yield from self._named_members(
             _iterator,
             prefix=prefix,
             recurse=recurse,
         )
-        for name, param in gen:
-            yield name, param
 
     def nonmeta_parameters(self, prefix="", recurse=True):
         for _, param in self.named_nonmeta_parameters(prefix=prefix, recurse=recurse):
@@ -209,7 +206,7 @@ class MetaModule(nn.Module):
         if params is None:
             params = AttrDict()
         params = AttrDict(params)
-        named_params = set([name for name, _ in self.named_parameters()])
+        named_params = {name for name, _ in self.named_parameters()}
         for name, param in self.named_parameters():
             params.setdefault(name, param)
         for name, param in self.state_dict().items():
@@ -227,7 +224,7 @@ def batch_meta_parameters(net, batch_size):
 
 def batch_meta_state_dict(net, batch_size):
     state_dict = AttrDict()
-    meta_parameters = set([name for name, _ in net.named_meta_parameters()])
+    meta_parameters = {name for name, _ in net.named_meta_parameters()}
     for name, param in net.meta_state_dict().items():
         state_dict[name] = param.clone().unsqueeze(0).repeat(batch_size, *[1] * len(param.shape))
     return state_dict

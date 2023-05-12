@@ -181,16 +181,13 @@ class RayVolumeIntegralResults:
         assert torch.allclose(self.volume_range.next_t0(), cur.volume_range.t0)
 
         def _combine_fn(
-            prev_val: Optional[torch.Tensor],
-            cur_val: Optional[torch.Tensor],
-            *,
-            prev_transmittance: torch.Tensor,
-        ):
+                prev_val: Optional[torch.Tensor],
+                cur_val: Optional[torch.Tensor],
+                *,
+                prev_transmittance: torch.Tensor,
+            ):
             assert prev_val is not None
-            if cur_val is None:
-                # cur_output.aux_losses are empty for the void_model.
-                return prev_val
-            return prev_val + prev_transmittance * cur_val
+            return prev_val if cur_val is None else prev_val + prev_transmittance * cur_val
 
         output = self.output.combine(
             cur.output, combine_fn=partial(_combine_fn, prev_transmittance=self.transmittance)
@@ -339,10 +336,7 @@ class RayVolumeIntegral:
 
         # 2. Integrate all results
         def _integrate(key: str, samples: torch.Tensor, weights: torch.Tensor):
-            if key == "density":
-                # Omit integrating the density, because we don't need it
-                return None
-            return torch.sum(samples * weights, dim=-2)
+            return None if key == "density" else torch.sum(samples * weights, dim=-2)
 
         def _is_tensor(_key: str, value: Any):
             return isinstance(value, torch.Tensor)
@@ -419,7 +413,7 @@ class StratifiedRaySampler(RaySampler):
             closer points are sampled more densely.
         """
         self.depth_mode = depth_mode
-        assert self.depth_mode in ("linear", "geometric", "harmonic")
+        assert self.depth_mode in {"linear", "geometric", "harmonic"}
 
     def sample(
         self,

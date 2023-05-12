@@ -85,8 +85,9 @@ class ProjectiveCamera(Camera):
 
     def image_coords(self) -> np.ndarray:
         ind = np.arange(self.width * self.height)
-        coords = np.stack([ind % self.width, ind // self.width], axis=1).astype(np.float32)
-        return coords
+        return np.stack([ind % self.width, ind // self.width], axis=1).astype(
+            np.float32
+        )
 
     def camera_rays(self, coords: np.ndarray) -> np.ndarray:
         fracs = (coords / (np.array([self.width, self.height], dtype=np.float32) - 1)) * 2 - 1

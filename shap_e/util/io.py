@@ -19,9 +19,7 @@ def read_config(path_or_file: Union[str, io.IOBase]) -> Any:
                 with bf.BlobFile(path_or_file, "rb") as f:
                     print(f.read())
                 raise exc
-    if isinstance(obj, dict):
-        return AttrDict(obj)
-    return obj
+    return AttrDict(obj) if isinstance(obj, dict) else obj
 
 
 @contextmanager

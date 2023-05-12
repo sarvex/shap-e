@@ -184,15 +184,19 @@ def maybe_encode_direction(
     direction: Optional[torch.Tensor] = None,
 ):
 
-    if version == "v1":
+    if version == "nerf":
+        return (
+            torch.zeros_like(posenc_nerf(position, min_deg=0, max_deg=8))
+            if direction is None
+            else posenc_nerf(direction, min_deg=0, max_deg=8)
+        )
+    elif version == "v1":
         sh_degree = 4
-        if direction is None:
-            return torch.zeros(*position.shape[:-1], sh_degree**2).to(position)
-        return spherical_harmonics_basis(direction, sh_degree=sh_degree)
-    elif version == "nerf":
-        if direction is None:
-            return torch.zeros_like(posenc_nerf(position, min_deg=0, max_deg=8))
-        return posenc_nerf(direction, min_deg=0, max_deg=8)
+        return (
+            torch.zeros(*position.shape[:-1], sh_degree**2).to(position)
+            if direction is None
+            else spherical_harmonics_basis(direction, sh_degree=sh_degree)
+        )
     else:
         raise ValueError(version)
 

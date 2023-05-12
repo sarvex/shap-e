@@ -52,7 +52,7 @@ def sample_latents(
 
     if hasattr(model, "cached_model_kwargs"):
         model_kwargs = model.cached_model_kwargs(batch_size, model_kwargs)
-    if guidance_scale != 1.0 and guidance_scale != 0.0:
+    if guidance_scale not in [1.0, 0.0]:
         for k, v in model_kwargs.copy().items():
             model_kwargs[k] = torch.cat([v, torch.zeros_like(v)], dim=0)
 

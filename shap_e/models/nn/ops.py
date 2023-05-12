@@ -251,7 +251,7 @@ class MLP(nn.Module):
     def forward(self, h, options: Optional[AttrDict] = None, log_prefix: str = ""):
         options = AttrDict() if options is None else AttrDict(options)
         *hid, out = self.affines
-        for i, f in enumerate(hid):
+        for f in hid:
             h = self.act(f(h))
         h = out(h)
         return h
@@ -394,7 +394,7 @@ class PointSetEmbedding(nn.Module):
         # new_xyz: sampled points position data, [B, n_point, C]
         # new_points: sampled points data, [B, n_point, n_sample, C+D]
         new_points = new_points.permute(0, 3, 2, 1)  # [B, C+D, n_sample, n_point]
-        for i, conv in enumerate(self.mlp_convs):
+        for conv in self.mlp_convs:
             new_points = self.act(self.apply_conv(new_points, conv))
 
         new_points = new_points.mean(dim=2)

@@ -76,7 +76,7 @@ class VectorEncoder(Encoder):
         self, vector: torch.Tensor, options: Optional[AttrDict] = None
     ) -> AttrDict:
         _ = options
-        return self.params_proj(self.latent_warp.unwarp(vector, options=options), options=options)
+        return self.params_proj(self.latent_warp.unwarp(vector, _=_), _=_)
 
 
 class ChannelsEncoder(VectorEncoder):
@@ -124,7 +124,7 @@ class ChannelsEncoder(VectorEncoder):
     ) -> AttrDict:
         _ = options
         return self.params_proj(
-            self.bottleneck_to_channels(self.latent_warp.unwarp(vector)), options=options
+            self.bottleneck_to_channels(self.latent_warp.unwarp(vector)), _=_
         )
 
 
@@ -170,7 +170,7 @@ class VectorDecoder(nn.Module):
         self, vector: torch.Tensor, options: Optional[AttrDict] = None
     ) -> AttrDict:
         _ = options
-        return self.params_proj(self.latent_warp.unwarp(vector, options=options), options=options)
+        return self.params_proj(self.latent_warp.unwarp(vector, _=_), _=_)
 
 
 class ChannelsDecoder(VectorDecoder):
@@ -194,5 +194,5 @@ class ChannelsDecoder(VectorDecoder):
     ) -> AttrDict:
         _ = options
         return self.params_proj(
-            self.bottleneck_to_channels(self.latent_warp.unwarp(vector)), options=options
+            self.bottleneck_to_channels(self.latent_warp.unwarp(vector)), _=_
         )

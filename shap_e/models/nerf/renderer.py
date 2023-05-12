@@ -181,7 +181,7 @@ class TwoStepNeRFRenderer(RayRenderer):
         # Combine results
         aux_losses = fine_results.output.aux_losses.copy()
         for key, val in coarse_results.output.aux_losses.items():
-            aux_losses[key + "_coarse"] = val
+            aux_losses[f"{key}_coarse"] = val
 
         return AttrDict(
             channels=fine_results.output.channels * self.channel_scale,

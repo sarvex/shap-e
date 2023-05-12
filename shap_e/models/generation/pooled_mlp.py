@@ -19,9 +19,9 @@ class PooledMLP(nn.Module):
         self.input_embed = nn.Conv1d(input_channels, hidden_size, kernel_size=1, device=device)
         self.time_embed = nn.Linear(hidden_size, hidden_size, device=device)
 
-        blocks = []
-        for _ in range(resblocks):
-            blocks.append(ResBlock(hidden_size, pool_op, device=device))
+        blocks = [
+            ResBlock(hidden_size, pool_op, device=device) for _ in range(resblocks)
+        ]
         self.sequence = nn.Sequential(*blocks)
 
         self.out = nn.Conv1d(hidden_size, output_channels, kernel_size=1, device=device)
@@ -41,7 +41,7 @@ class PooledMLP(nn.Module):
 class ResBlock(nn.Module):
     def __init__(self, hidden_size: int, pool_op: str, device: torch.device):
         super().__init__()
-        assert pool_op in ["mean", "max"]
+        assert pool_op in {"mean", "max"}
         self.pool_op = pool_op
         self.body = nn.Sequential(
             nn.SiLU(),

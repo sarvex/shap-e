@@ -98,10 +98,10 @@ class TriMesh:
             vertices = ["{} {} {}".format(*coord) for coord in self.verts.tolist()]
 
         faces = [
-            "f {} {} {}".format(str(tri[0] + 1), str(tri[1] + 1), str(tri[2] + 1))
+            f"f {str(tri[0] + 1)} {str(tri[1] + 1)} {str(tri[2] + 1)}"
             for tri in self.faces.tolist()
         ]
 
-        combined_data = ["v " + vertex for vertex in vertices] + faces
+        combined_data = [f"v {vertex}" for vertex in vertices] + faces
 
         raw_f.writelines("\n".join(combined_data))

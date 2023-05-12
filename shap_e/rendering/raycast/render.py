@@ -39,8 +39,8 @@ def render_diffuse_mesh(
             checkpoint=checkpoint,
         )
     )
-    num_rays = len(all_collisions.normals)
     if mesh.vertex_colors is None:
+        num_rays = len(all_collisions.normals)
         vertex_colors = torch.tensor([[0.8, 0.8, 0.8]]).to(mesh.vertices).repeat(num_rays, 1)
     else:
         vertex_colors = mesh.vertex_colors

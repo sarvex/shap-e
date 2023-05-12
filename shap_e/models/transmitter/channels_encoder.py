@@ -279,8 +279,7 @@ class PointCloudTransformerChannelsEncoder(TransformerChannelsEncoder):
     def encode_input(self, batch: AttrDict, options: Optional[AttrDict] = None) -> torch.Tensor:
         _ = options
         points = batch.points
-        h = self.input_proj(points.permute(0, 2, 1))  # NCL -> NLC
-        return h
+        return self.input_proj(points.permute(0, 2, 1))
 
 
 class PointCloudPerceiverChannelsEncoder(PerceiverChannelsEncoder):
@@ -315,7 +314,7 @@ class PointCloudPerceiverChannelsEncoder(PerceiverChannelsEncoder):
         **kwargs,
     ):
         super().__init__(**kwargs)
-        assert cross_attention_dataset in (
+        assert cross_attention_dataset in {
             "pcl",
             "multiview",
             "dense_pose_multiview",
@@ -323,8 +322,8 @@ class PointCloudPerceiverChannelsEncoder(PerceiverChannelsEncoder):
             "pcl_and_multiview_pcl",
             "incorrect_multiview_pcl",
             "pcl_and_incorrect_multiview_pcl",
-        )
-        assert fps_method in ("fps", "first")
+        }
+        assert fps_method in {"fps", "first"}
         self.cross_attention_dataset = cross_attention_dataset
         self.fps_method = fps_method
         self.input_channels = input_channels
@@ -411,35 +410,12 @@ class PointCloudPerceiverChannelsEncoder(PerceiverChannelsEncoder):
                 dtype=self.dtype,
             )
 
-        elif (
-            self.cross_attention_dataset == "multiview_pcl"
-            or self.cross_attention_dataset == "incorrect_multiview_pcl"
-        ):
-            self.view_pose_width = self.width // 2
-            self.image_size = image_size
-            self.patch_size = patch_size
-            self.max_depth = max_depth
-            assert use_depth
-            self.mv_pcl_embed = MultiviewPointCloudEmbedding(
-                posemb_version="nerf",
-                n_channels=3,
-                out_features=self.view_pose_width,
-                device=self.device,
-                dtype=self.dtype,
-            )
-            self.patch_emb = nn.Conv2d(
-                in_channels=self.view_pose_width,
-                out_channels=self.width,
-                kernel_size=patch_size,
-                stride=patch_size,
-                device=self.device,
-                dtype=self.dtype,
-            )
-
-        elif (
-            self.cross_attention_dataset == "pcl_and_multiview_pcl"
-            or self.cross_attention_dataset == "pcl_and_incorrect_multiview_pcl"
-        ):
+        elif self.cross_attention_dataset in {
+            "multiview_pcl",
+            "incorrect_multiview_pcl",
+            "pcl_and_multiview_pcl",
+            "pcl_and_incorrect_multiview_pcl",
+        }:
             self.view_pose_width = self.width // 2
             self.image_size = image_size
             self.patch_size = patch_size
@@ -537,8 +513,7 @@ class PointCloudPerceiverChannelsEncoder(PerceiverChannelsEncoder):
             while True:
                 examples = next(it)
                 assert examples.shape == (batch_size, self.inner_batch_size, n_patches, self.width)
-                views = examples.reshape(batch_size, -1, width) + self.pos_emb
-                yield views
+                yield examples.reshape(batch_size, -1, width) + self.pos_emb
 
         return gen()
 
@@ -564,8 +539,7 @@ class PointCloudPerceiverChannelsEncoder(PerceiverChannelsEncoder):
             while True:
                 examples = next(it)
                 assert examples.shape == (batch_size, inner_batch_size, n_patches, self.width)
-                views = examples.reshape(batch_size, -1, width)
-                yield views
+                yield examples.reshape(batch_size, -1, width)
 
         return gen()
 
@@ -836,19 +810,18 @@ class PointCloudPerceiverChannelsEncoder(PerceiverChannelsEncoder):
             return cameras
         outer_batch = []
         for inner_list in cameras:
-            inner_batch = []
-            for camera in inner_list:
-                inner_batch.append(
-                    np.array(
-                        [
-                            *camera.x,
-                            *camera.y,
-                            *camera.z,
-                            *camera.origin,
-                            camera.x_fov,
-                        ]
-                    )
+            inner_batch = [
+                np.array(
+                    [
+                        *camera.x,
+                        *camera.y,
+                        *camera.z,
+                        *camera.origin,
+                        camera.x_fov,
+                    ]
                 )
+                for camera in inner_list
+            ]
             outer_batch.append(np.stack(inner_batch, axis=0))
         return torch.from_numpy(np.stack(outer_batch, axis=0)).float()
 

@@ -11,11 +11,10 @@ from shap_e.util.collections import AttrDict
 
 
 def flatten_param_shapes(param_shapes: Dict[str, Tuple[int]]):
-    flat_shapes = OrderedDict(
+    return OrderedDict(
         (name, (int(np.prod(shape)) // shape[-1], shape[-1]))
         for name, shape in param_shapes.items()
     )
-    return flat_shapes
 
 
 class ParamsProj(nn.Module, ABC):

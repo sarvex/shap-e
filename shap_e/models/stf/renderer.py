@@ -187,9 +187,7 @@ def render_views_from_stf(
             options=options,
         )
         raw_signed_distance = sdf_out.signed_distance
-        raw_density = None
-        if "density" in sdf_out:
-            raw_density = sdf_out.density
+        raw_density = sdf_out.density if "density" in sdf_out else None
         with torch.autocast(device_type, enabled=False):
             fields = sdf_out.signed_distance.float()
             raw_signed_distance = sdf_out.signed_distance
@@ -264,7 +262,7 @@ def render_views_from_stf(
         ), f"expected [meta_batch x inner_batch x texture_channels] field results, but got {textures.shape}"
         for m, texture in zip(raw_meshes, textures):
             texture = texture[: len(m.verts)]
-            m.vertex_channels = {name: ch for name, ch in zip(texture_channels, texture.unbind(-1))}
+            m.vertex_channels = dict(zip(texture_channels, texture.unbind(-1)))
 
     args = dict(
         options=options,
@@ -412,38 +410,36 @@ def _render_with_raycast(
     z = camera.z.reshape(cam_shape)
 
     with torch.autocast(device_type, enabled=False):
-        all_meshes = []
-        for i, mesh in enumerate(raw_meshes):
-            all_meshes.append(
-                TorchTriMesh(
-                    faces=mesh.faces.long(),
-                    vertices=mesh.verts.float(),
-                    vertex_colors=tf_out.channels[i, : len(mesh.verts)].float(),
-                )
+        all_meshes = [
+            TorchTriMesh(
+                faces=mesh.faces.long(),
+                vertices=mesh.verts.float(),
+                vertex_colors=tf_out.channels[i, : len(mesh.verts)].float(),
             )
+            for i, mesh in enumerate(raw_meshes)
+        ]
         all_images = []
         for i, mesh in enumerate(all_meshes):
-            for j in range(inner_batch_size):
-                all_images.append(
-                    render_diffuse_mesh(
-                        camera=ProjectiveCamera(
-                            origin=origin[i, j].detach().cpu().numpy(),
-                            x=x[i, j].detach().cpu().numpy(),
-                            y=y[i, j].detach().cpu().numpy(),
-                            z=z[i, j].detach().cpu().numpy(),
-                            width=camera.width,
-                            height=camera.height,
-                            x_fov=camera.x_fov,
-                            y_fov=camera.y_fov,
-                        ),
-                        mesh=mesh,
-                        diffuse=float(np.array(diffuse_color).mean()),
-                        ambient=float(np.array(ambient_color).mean()),
-                        ray_batch_size=16,  # low memory usage
-                        checkpoint=options.checkpoint_render,
-                    )
+            all_images.extend(
+                render_diffuse_mesh(
+                    camera=ProjectiveCamera(
+                        origin=origin[i, j].detach().cpu().numpy(),
+                        x=x[i, j].detach().cpu().numpy(),
+                        y=y[i, j].detach().cpu().numpy(),
+                        z=z[i, j].detach().cpu().numpy(),
+                        width=camera.width,
+                        height=camera.height,
+                        x_fov=camera.x_fov,
+                        y_fov=camera.y_fov,
+                    ),
+                    mesh=mesh,
+                    diffuse=float(np.array(diffuse_color).mean()),
+                    ambient=float(np.array(ambient_color).mean()),
+                    ray_batch_size=16,  # low memory usage
+                    checkpoint=options.checkpoint_render,
                 )
-
+                for j in range(inner_batch_size)
+            )
         n_channels = len(texture_channels)
         views = torch.stack(all_images).view(
             batch_size, *inner_shape, camera.height, camera.width, n_channels + 1

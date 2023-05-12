@@ -220,10 +220,7 @@ def create_vertex_color_shaders():
                 bsdf_node = node
         assert bsdf_node is not None, "material has no Principled BSDF node to modify"
 
-        socket_map = {}
-        for input in bsdf_node.inputs:
-            socket_map[input.name] = input
-
+        socket_map = {input.name: input for input in bsdf_node.inputs}
         # Make sure nothing lights the object except for the diffuse color.
         socket_map["Specular"].default_value = 0.0
         socket_map["Roughness"].default_value = 1.0
@@ -238,11 +235,12 @@ def create_vertex_color_shaders():
 
 def create_default_materials():
     for obj in bpy.context.scene.objects.values():
-        if isinstance(obj.data, (bpy.types.Mesh)):
-            if not len(obj.data.materials):
-                mat = bpy.data.materials.new(name="DefaultMaterial")
-                mat.use_nodes = True
-                obj.data.materials.append(mat)
+        if isinstance(obj.data, (bpy.types.Mesh)) and not len(
+            obj.data.materials
+        ):
+            mat = bpy.data.materials.new(name="DefaultMaterial")
+            mat.use_nodes = True
+            obj.data.materials.append(mat)
 
 
 def find_materials():
@@ -294,7 +292,7 @@ def setup_material_extraction_shader_for_material(mat, capturing_material_alpha:
     for input in bsdf_node.inputs:
         socket_map[input.name] = input
     for name in ["Base Color", "Emission", "Emission Strength", "Alpha", "Specular"]:
-        assert name in socket_map.keys(), f"{name} not in {list(socket_map.keys())}"
+        assert name in socket_map, f"{name} not in {list(socket_map.keys())}"
 
     old_base_color = get_socket_value(mat.node_tree, socket_map["Base Color"])
     old_alpha = get_socket_value(mat.node_tree, socket_map["Alpha"])
@@ -337,10 +335,14 @@ def get_socket_value(tree, socket):
     default = socket.default_value
     if not isinstance(default, float):
         default = list(default)
-    for link in tree.links:
-        if link.to_socket == socket:
-            return (link.from_socket, default)
-    return (None, default)
+    return next(
+        (
+            (link.from_socket, default)
+            for link in tree.links
+            if link.to_socket == socket
+        ),
+        (None, default),
+    )
 
 
 def clear_socket_input(tree, socket):
@@ -467,11 +469,10 @@ def render_scene(output_path, fast_mode: bool, extract_material: bool, basic_lig
             bpy.context.scene.eevee.taa_render_samples = 1
         elif bpy.context.scene.render.engine == "CYCLES":
             bpy.context.scene.cycles.samples = 256
-    else:
-        if bpy.context.scene.render.engine == "CYCLES":
-            # We should still impose a per-frame time limit
-            # so that we don't timeout completely.
-            bpy.context.scene.cycles.time_limit = 40
+    elif bpy.context.scene.render.engine == "CYCLES":
+        # We should still impose a per-frame time limit
+        # so that we don't timeout completely.
+        bpy.context.scene.cycles.time_limit = 40
     bpy.context.view_layer.update()
     bpy.context.scene.use_nodes = True
     bpy.context.scene.view_layers["ViewLayer"].use_pass_z = True
@@ -571,8 +572,8 @@ def save_rendering_dataset(
     extract_material: bool,
     delete_material: bool,
 ):
-    assert light_mode in ["random", "uniform", "camera", "basic"]
-    assert camera_pose in ["random", "z-circular", "z-circular-elevated"]
+    assert light_mode in {"random", "uniform", "camera", "basic"}
+    assert camera_pose in {"random", "z-circular", "z-circular-elevated"}
 
     basic_lighting = light_mode == "basic"
     assert not (basic_lighting and extract_material), "cannot extract material with basic lighting"

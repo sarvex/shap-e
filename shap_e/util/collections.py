@@ -13,7 +13,7 @@ class AttrDict(OrderedDict):
 
     # pylint: disable=super-init-not-called
     def __init__(self, *args, **kwargs):
-        if len(args) == 0:
+        if not args:
             for key, value in kwargs.items():
                 self.__setitem__(key, value)
         else:

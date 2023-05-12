@@ -33,12 +33,9 @@ def render_model(
     with tempfile.TemporaryDirectory() as tmp_dir:
         tmp_in = model_path
         tmp_out = os.path.join(tmp_dir, "out")
-        zip_out = tmp_out + ".zip"
+        zip_out = f"{tmp_out}.zip"
         os.mkdir(tmp_out)
-        args = []
-        if platform.system() == "Linux":
-            # Needed to enable Eevee backend on headless linux.
-            args = ["xvfb-run", "-a"]
+        args = ["xvfb-run", "-a"] if platform.system() == "Linux" else []
         args.extend(
             [
                 _blender_binary_path(),
@@ -87,7 +84,7 @@ def render_model(
             if verbose:
                 # There is no output available, since it was
                 # logged directly to stdout/stderr.
-                raise RuntimeError(f"render failed: output file missing")
+                raise RuntimeError("render failed: output file missing")
             else:
                 raise RuntimeError(f"render failed: output file missing. Output: {output}")
         _combine_rgba(tmp_out)

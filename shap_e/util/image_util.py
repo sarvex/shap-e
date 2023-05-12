@@ -107,7 +107,7 @@ def remove_alpha(img: Image.Image, mode: str = "random") -> Image.Image:
             )
             bg.paste(img, mask=img)
             img = bg
-        elif mode == "black" or mode == "white":
+        elif mode in {"black", "white"}:
             img_arr = img_arr.astype(float)
             rgb, alpha = img_arr[:, :, :3], img_arr[:, :, -1:] / 255
             background = np.zeros((1, 1, 3)) if mode == "black" else np.full((1, 1, 3), 255)

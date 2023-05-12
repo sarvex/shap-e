@@ -80,14 +80,13 @@ class RayRenderer(Renderer):
         options: Optional[Dict] = None,
         device: torch.device = torch.device("cuda"),
     ) -> AttrDict:
-        output = render_views_from_rays(
+        return render_views_from_rays(
             self.render_rays,
             batch,
             params=params,
             options=options,
             device=self.device,
         )
-        return output
 
     def forward(
         self,
@@ -145,7 +144,7 @@ class RayRenderer(Renderer):
 
 def get_camera_from_batch(batch: AttrDict) -> Tuple[DifferentiableCamera, int, Tuple[int]]:
     if "poses" in batch:
-        assert not "cameras" in batch
+        assert "cameras" not in batch
         batch_size, *inner_shape, n_vecs, spatial_dim = batch.poses.shape
         assert n_vecs == 2 and spatial_dim == 3
         inner_batch_size = int(np.prod(inner_shape))
@@ -153,7 +152,7 @@ def get_camera_from_batch(batch: AttrDict) -> Tuple[DifferentiableCamera, int, T
         position, direction = poses[:, 0], poses[:, 1]
         camera = projective_camera_frame(position, direction, batch.camera)
     elif "cameras" in batch:
-        assert not "camera" in batch
+        assert "camera" not in batch
         batch_size, *inner_shape = batch.cameras.shape
         camera = batch.cameras.flat_camera
     else:
@@ -164,9 +163,7 @@ def get_camera_from_batch(batch: AttrDict) -> Tuple[DifferentiableCamera, int, T
 
 
 def append_tensor(val_list: Optional[List[torch.Tensor]], output: Optional[torch.Tensor]):
-    if val_list is None:
-        return [output]
-    return val_list + [output]
+    return [output] if val_list is None else val_list + [output]
 
 
 def render_views_from_rays(
@@ -207,7 +204,7 @@ def render_views_from_rays(
     assert rays.shape[1] % ray_batch_size == 0
     n_batches = rays.shape[1] // ray_batch_size
 
-    output_list = AttrDict(aux_losses=dict())
+    output_list = AttrDict(aux_losses={})
 
     for idx in range(n_batches):
         rays_batch = AttrDict(

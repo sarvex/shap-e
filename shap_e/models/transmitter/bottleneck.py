@@ -73,9 +73,7 @@ class ClampNoiseBottleneck(LatentBottleneck):
     def forward(self, x: torch.Tensor, options: Optional[AttrDict] = None) -> AttrDict:
         _ = options
         x = x.tanh()
-        if not self.training:
-            return x
-        return x + torch.randn_like(x) * self.noise_scale
+        return x if not self.training else x + torch.randn_like(x) * self.noise_scale
 
 
 class ClampDiffusionNoiseBottleneck(LatentBottleneck):

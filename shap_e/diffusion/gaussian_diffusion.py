@@ -144,7 +144,7 @@ def space_timesteps(num_timesteps, section_counts):
                     return set(range(0, num_timesteps, i))
             raise ValueError(f"cannot create exactly {num_timesteps} steps with an integer stride")
         elif section_counts.startswith("exact"):
-            res = set(int(x) for x in section_counts[len("exact") :].split(","))
+            res = {int(x) for x in section_counts[len("exact") :].split(",")}
             for x in res:
                 if x < 0 or x >= num_timesteps:
                     raise ValueError(f"timestep out of bounds: {x}")
@@ -158,10 +158,7 @@ def space_timesteps(num_timesteps, section_counts):
         size = size_per + (1 if i < extra else 0)
         if size < section_count:
             raise ValueError(f"cannot divide section of {size} steps into {section_count}")
-        if section_count <= 1:
-            frac_stride = 1
-        else:
-            frac_stride = (size - 1) / (section_count - 1)
+        frac_stride = 1 if section_count <= 1 else (size - 1) / (section_count - 1)
         cur_idx = 0.0
         taken_steps = []
         for _ in range(section_count):
@@ -368,9 +365,7 @@ class GaussianDiffusion:
         def process_xstart(x):
             if denoised_fn is not None:
                 x = denoised_fn(x)
-            if clip_denoised:
-                return x.clamp(-1, 1)
-            return x
+            return x.clamp(-1, 1) if clip_denoised else x
 
         if self.model_mean_type == "x_prev":
             pred_xstart = process_xstart(
@@ -429,8 +424,7 @@ class GaussianDiffusion:
         This uses the conditioning strategy from Sohl-Dickstein et al. (2015).
         """
         gradient = cond_fn(x, t, **(model_kwargs or {}))
-        new_mean = p_mean_var["mean"].float() + p_mean_var["variance"] * gradient.float()
-        return new_mean
+        return p_mean_var["mean"].float() + p_mean_var["variance"] * gradient.float()
 
     def condition_score(self, cond_fn, p_mean_var, x, t, model_kwargs=None):
         """
@@ -568,10 +562,7 @@ class GaussianDiffusion:
         if device is None:
             device = next(model.parameters()).device
         assert isinstance(shape, (tuple, list))
-        if noise is not None:
-            img = noise
-        else:
-            img = th.randn(*shape, device=device) * temp
+        img = noise if noise is not None else th.randn(*shape, device=device) * temp
         indices = list(range(self.num_timesteps))[::-1]
 
         if progress:
@@ -742,10 +733,7 @@ class GaussianDiffusion:
         if device is None:
             device = next(model.parameters()).device
         assert isinstance(shape, (tuple, list))
-        if noise is not None:
-            img = noise
-        else:
-            img = th.randn(*shape, device=device) * temp
+        img = noise if noise is not None else th.randn(*shape, device=device) * temp
         indices = list(range(self.num_timesteps))[::-1]
 
         if progress:
@@ -831,7 +819,7 @@ class GaussianDiffusion:
 
         terms = {}
 
-        if self.loss_type == "kl" or self.loss_type == "rescaled_kl":
+        if self.loss_type in ["kl", "rescaled_kl"]:
             vb_terms = self._vb_terms_bpd(
                 model=model,
                 x_start=x_start,
@@ -844,7 +832,7 @@ class GaussianDiffusion:
             if self.loss_type == "rescaled_kl":
                 terms["loss"] *= self.num_timesteps
             extra = vb_terms["extra"]
-        elif self.loss_type == "mse" or self.loss_type == "rescaled_mse":
+        elif self.loss_type in ["mse", "rescaled_mse"]:
             model_output = model(x_t, t, **model_kwargs)
             if isinstance(model_output, tuple):
                 model_output, extra = model_output
@@ -884,15 +872,12 @@ class GaussianDiffusion:
             }[self.model_mean_type]
             assert model_output.shape == target.shape == x_start.shape
             terms["mse"] = mean_flat((target - model_output) ** 2)
-            if "vb" in terms:
-                terms["loss"] = terms["mse"] + terms["vb"]
-            else:
-                terms["loss"] = terms["mse"]
+            terms["loss"] = terms["mse"] + terms["vb"] if "vb" in terms else terms["mse"]
         else:
             raise NotImplementedError(self.loss_type)
 
         if "losses" in extra:
-            terms.update({k: loss for k, (loss, _scale) in extra["losses"].items()})
+            terms |= {k: loss for k, (loss, _scale) in extra["losses"].items()}
             for loss, scale in extra["losses"].values():
                 terms["loss"] = terms["loss"] + loss * scale
 
@@ -1077,11 +1062,14 @@ def normal_kl(mean1, logvar1, mean2, logvar2):
     Shapes are automatically broadcasted, so batches can be compared to
     scalars, among other use cases.
     """
-    tensor = None
-    for obj in (mean1, logvar1, mean2, logvar2):
-        if isinstance(obj, th.Tensor):
-            tensor = obj
-            break
+    tensor = next(
+        (
+            obj
+            for obj in (mean1, logvar1, mean2, logvar2)
+            if isinstance(obj, th.Tensor)
+        ),
+        None,
+    )
     assert tensor is not None, "at least one argument must be a Tensor"
 
     # Force variances to be Tensors. Broadcasting helps convert scalars to

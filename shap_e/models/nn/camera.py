@@ -70,14 +70,13 @@ class DifferentiableProjectiveCamera(DifferentiableCamera):
         :return: coords of shape (width * height, 2)
         """
         pixel_indices = torch.arange(self.height * self.width)
-        coords = torch.stack(
+        return torch.stack(
             [
                 pixel_indices % self.width,
                 torch.div(pixel_indices, self.width, rounding_mode="trunc"),
             ],
             axis=1,
         )
-        return coords
 
     def camera_rays(self, coords: torch.Tensor) -> torch.Tensor:
         batch_size, *shape, n_coords = coords.shape
@@ -185,7 +184,7 @@ def projective_camera_frame(
     `toward` vector to fully implement 6 degrees of freedom.
     """
     rot = camera_orientation(toward)
-    camera = DifferentiableProjectiveCamera(
+    return DifferentiableProjectiveCamera(
         origin=origin,
         x=rot[:, 0],
         y=rot[:, 1],
@@ -195,7 +194,6 @@ def projective_camera_frame(
         x_fov=camera_params.x_fov,
         y_fov=camera_params.y_fov,
     )
-    return camera
 
 
 @torch.no_grad()
@@ -203,5 +201,4 @@ def get_image_coords(width, height) -> torch.Tensor:
     pixel_indices = torch.arange(height * width)
     # torch throws warnings for pixel_indices // width
     pixel_indices_div = torch.div(pixel_indices, width, rounding_mode="trunc")
-    coords = torch.stack([pixel_indices % width, pixel_indices_div], dim=1)
-    return coords
+    return torch.stack([pixel_indices % width, pixel_indices_div], dim=1)

@@ -168,8 +168,7 @@ class MLPNeRFModel(MetaModule, NeRFModel):
         self.to(device)
 
     def encode_position(self, query: Query):
-        h = encode_position(self.posenc_version, position=query.position)
-        return h
+        return encode_position(self.posenc_version, position=query.position)
 
     def forward(
         self,
